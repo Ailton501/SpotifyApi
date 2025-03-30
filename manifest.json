@@ -1,0 +1,36 @@
+{
+  "name": "Música",
+  "short_name": "HuTaoMusic",
+  "display": "standalone",
+  "background_color": "#4B0082",
+  "theme_color": "#FF0000",
+  "icons": [
+    {
+        "src": "/img/icon.png",
+        "sizes": "736x736",
+        "type": "image/png"
+    },
+    {
+        "src": "/img/default-song.png",
+        "sizes": "736x736",
+        "type": "image/png"
+    }
+],
+"screenshots": [
+    {
+        "src": "/img/cap1.png",
+        "sizes": "1850x871",
+        "type": "image/png",
+        "form_factor": "wide"
+    },
+    {
+        "src": "/img/cap2.png",
+        "sizes": "432x773",
+        "type": "image/png",
+        "form_factor": "narrow"
+    }
+],
+"id": "/",
+"start_url": "/index.html",
+"scope": "/"
+}
