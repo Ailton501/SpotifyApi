@@ -189,11 +189,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    function pauseTrack() {
-        currentState.isPlaying = false;
-        currentState.audio.pause();
-        playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-    }
 
     function showErrorMessage(element, message) {
         const errorElement = document.createElement('div');
@@ -425,25 +420,68 @@ function loadInitialData() {
         });
     });
 
-    playButton.addEventListener('click', () => {
-    if (!currentState.currentTrack) return;
+playButton.addEventListener('click', () => {
+    if (!currentState.currentTrack?.preview_url) {
+        showErrorMessage(document.getElementById('songs'), 'Esta canción no tiene vista previa disponible');
+        return;
+    }
     
     if (currentState.audio.paused) {
-        currentState.audio.play();
-        playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+        currentState.audio.play()
+            .then(() => {
+                playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+            })
+            .catch(error => {
+                console.error('Error al reproducir:', error);
+                playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            });
     } else {
         currentState.audio.pause();
         playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-         }
-    });
+    }
+});
 
-    prevButton.addEventListener('click', () => {
-        console.log('Canción anterior');
-    });
+async function playTrack(track) {
+    try {
+        const trackId = track.id || track.data?.id || track.uri?.split(':')[2];
+        if (!trackId) throw new Error('ID de track no disponible');
 
-    nextButton.addEventListener('click', () => {
-        console.log('Siguiente canción');
-    });
+        const detailedTrack = await fetchTrackDetails(trackId);
+        
+        currentState.currentTrack = detailedTrack;
+        
+        if (!detailedTrack.preview_url) {
+            throw new Error('No hay vista previa disponible');
+        }
+
+        nowPlayingTitle.textContent = detailedTrack.name;
+        nowPlayingArtist.textContent = detailedTrack.artists?.map(a => a.name).join(', ') || 'Artista desconocido';
+        nowPlayingCover.src = detailedTrack.album?.images?.[0]?.url || 'img/default-song.png';
+
+        currentState.audio.pause();
+        currentState.audio = new Audio(detailedTrack.preview_url);
+        currentState.audio.volume = currentState.volume / 100;
+
+        currentState.audio.ontimeupdate = () => {
+            if (currentState.audio.duration) {
+                const progress = (currentState.audio.currentTime / currentState.audio.duration) * 100;
+                progressBar.value = progress;
+                document.getElementById('current-time').textContent = 
+                    formatTime(currentState.audio.currentTime);
+            }
+        };
+
+        await currentState.audio.play();
+        playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+
+    } catch (error) {
+        console.error("❌ Error al reproducir:", error);
+        playButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+        showErrorMessage(document.getElementById('songs'), error.message.includes('preview') 
+            ? 'Vista previa no disponible' 
+            : 'Error al cargar la canción');
+    }
+}
 
     volumeControl.addEventListener('input', (e) => {
         currentState.volume = e.target.value;
