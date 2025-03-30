@@ -4,7 +4,8 @@
     --texto: #ffffff;     
     --negro: #2D3436;          
     --blanco: #F5F5F5;         
-    --gris: #e1eaec;           
+    --gris: #e1eaec;   
+    --play: #white;        
 }
 
 * {
@@ -31,7 +32,6 @@ body {
     min-height: calc(100vh - 90px);
 }
 
-/* Sidebar Styles */
 .sidebar {
     width: 240px;
     background-color: var(--rojo-oscuro);
@@ -335,6 +335,17 @@ body {
     width: 20px;
     height: 20px;
     fill: white;
+}
+
+.player-controls .controls {
+    justify-content: center;
+    gap: 20px;
+}
+
+#play-btn {
+    transform: scale(1.5);
+    margin: 0 15px;
+    color: #ffffff;
 }
 
 @keyframes spin {
