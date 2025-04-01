@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
     const playButton = document.getElementById('play-btn');
-    const prevButton = document.getElementById('prev-btn');
-    const nextButton = document.getElementById('next-btn');
     const progressBar = document.getElementById('progress');
     const volumeControl = document.getElementById('volume');
     const searchInput = document.getElementById('search-input');
@@ -24,7 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const apiEndpoints = {
         search: 'https://spotify23.p.rapidapi.com/search/?type=multi&offset=0&limit=10&numberOfTopResults=5',
         trackDetails: 'https://spotify23.p.rapidapi.com/tracks/',
-        artistDetails: 'https://spotify23.p.rapidapi.com/artist_overview/'
+        artistDetails: 'https://spotify23.p.rapidapi.com/artist_overview/',
+        albumTracks: 'https://spotify23.p.rapidapi.com/album_tracks/'
     };
 
     let currentState = {
@@ -63,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function fetchTrackDetails(trackId) {
         try {
-            const response = await fetch(`https://spotify23.p.rapidapi.com/tracks/?ids=${trackId}`, { // Usar endpoint de RapidAPI
+            const response = await fetch(`https://spotify23.p.rapidapi.com/tracks/?ids=${trackId}`, {
                 headers: {
                     'x-rapidapi-key': '77949e5b31mshb521e7aa50867cdp11f731jsne9bfdb0629c9',
                     'x-rapidapi-host': 'spotify23.p.rapidapi.com'
@@ -72,13 +71,30 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!response.ok) throw new Error(`Error ${response.status}`);
             const data = await response.json();
-            return data.tracks[0]; // Estructura de respuesta de RapidAPI
+            return data.tracks[0]; 
         } catch (error) {
             console.error('Error fetching track:', error);
             throw error;
         }
     }
 
+
+    async function fetchAlbumTracks(albumId) {
+        try {
+            setLoading(true);
+            const response = await fetch(`${apiEndpoints.albumTracks}?id=${albumId}&offset=0&limit=50`, {
+                headers: apiConfig.headers
+            });
+            if (!response.ok) throw new Error('Error al cargar el álbum');
+            const data = await response.json();
+            return data.data.album.tracks.items;
+        } catch (error) {
+            console.error('Error fetching album tracks:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    }
     
 
     async function searchSpotify(query) {
@@ -247,10 +263,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'card';
         
+        
         const trackData = track.data || track;
         const imageUrl = trackData.album?.images?.[0]?.url || 
                         trackData.albumOfTrack?.coverArt?.sources?.[0]?.url || 
                         'img/default-song.png';
+
+
         
         let artistNames = 'Artista desconocido';
         if (trackData.artists) {
@@ -291,6 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function createAlbumCard(album) {
         const card = document.createElement('div');
         card.className = 'card';
+
         
         const imageUrl = album.coverArt?.sources?.[0]?.url || 
                         album.images?.[0]?.url || 
@@ -315,6 +335,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 Ver en Spotify
             </a>` : ''}
         `;
+
+        card.addEventListener('click', async () => {
+            try {
+                const albumId = album.uri.split(':')[2];
+                const tracks = await fetchAlbumTracks(albumId);
+                
+                // Crear estructura compatible con updateUI
+                const normalizedResults = {
+                    tracks: { 
+                        items: tracks.map(track => ({
+                            data: {
+                                ...track,
+                                album: {
+                                    images: album.images || album.coverArt?.sources
+                                }
+                            }
+                        }))
+                    },
+                    albums: { items: [] },
+                    artists: { items: [] }
+                };
+                
+                currentState.searchResults = normalizedResults;
+                updateUI(normalizedResults);
+                
+                // Cambiar a la pestaña de canciones
+                document.querySelector('[data-tab="songs"]').click();
+            } catch (error) {
+                console.error('Error al cargar el álbum:', error);
+                showErrorMessage(card, 'Error al cargar las canciones');
+            }
+        });
         
         return card;
     }
